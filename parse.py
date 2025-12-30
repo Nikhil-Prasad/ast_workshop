@@ -1,3 +1,5 @@
+import expr_ast as ast
+
 NUMBER = "NUMBER"
 PLUS = "PLUS"
 MINUS = "MINUS"
@@ -56,6 +58,82 @@ class Lexer:
             self.pos +=1
             return Token(RPAREN, current_char)
          
+class Parser:
+    def __init__(self, lexer):
+        self.lexer = lexer
+        self.current_token = lexer.next_token()
 
+    def peek(self):
+        """See current token without consuming it"""
+        return self.current_token.type
+    
+    def advance(self):
+        """Move to next token"""
+        self.current_token = self.lexer.next_token()
+
+    def expect(self, token_type):
+        """Consume token if it matches, else error"""
+        if self.current_token.type != token_type:
+            raise SyntaxError
+        self.advance()
+    
+    def get_infix_binding_power(self, op_type):
+        """Returns the binding power for an operator"""
+        BP = {
+            PLUS: (3,4),
+            MINUS: (3,4),
+            STAR: (5,6),
+            SLASH: (5,6)
+        }
+        if op_type in BP:
+            return BP[op_type]
+        else:
+            raise ValueError(f"unknown operator: {op_type}")
         
+    def parse_primary(self):
+        """Base case primary/prefix parser"""
+        if self.current_token.type == NUMBER:
+            value = self.current_token.value
+            self.advance()
+            return ast.Num(value)
+        elif self.current_token.type == LPAREN:
+            self.advance()
+            expr = self.parse_expr(0)
+            self.expect(RPAREN)
+            return expr 
+        elif self.current_token.type == MINUS:
+            value = self.current_token.value
+            self.advance()
+            expr = self.parse_expr(7) #harcoded higher for unaryOps
+            return ast.UnaryOp(value, expr)
+        else:
+            raise SyntaxError(f"Unexpected token in primary position: {self.current_token.type}")
+        
+    def parse_expr(self, min_bp):
+        """Core pratt algorithm"""
+        lhs = self.parse_primary()   
+        while True: 
+            op_type = self.peek()
+            if op_type not in [PLUS, MINUS, STAR, SLASH]:
+                break         
+            lbp, rbp = self.get_infix_binding_power(op_type)
+            if lbp < min_bp:
+                break            
+            value = self.current_token.value
+            self.advance()
+            rhs = self.parse_expr(rbp)
+            lhs = ast.BinOp(lhs, value, rhs)
+        
+        return lhs
 
+    def parse_statement(self):
+        """Parse individual statements"""
+        NotImplemented
+    
+    def parse_module(self):
+        """Parse full module"""
+        NotImplemented
+    
+    def parse(self):
+        """Entry point - parse a complete expression"""
+        return self.parse_expr(0)
