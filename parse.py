@@ -10,9 +10,10 @@ RPAREN = "RPAREN"
 EOF = "EOF"
 
 class Token:
-    def __init__(self, type, value):
+    def __init__(self, type, value, pos=0):
         self.type = type
         self.value = value
+        self.pos = pos  # Position in source where token starts
 
 class Lexer:
     def __init__(self, text):
@@ -26,37 +27,41 @@ class Lexer:
             self.pos += 1
         # check if current token is EOF 
         if self.pos >= len(self.text):
-            return Token(EOF, None) #will work as soon as we get out of range
-        #get current character
+            return Token(EOF, None, self.pos)
+        
+        # Remember token start position
+        token_start = self.pos
         current_char = self.text[self.pos]
+        
         #do checks based on constant types defined above.
         if current_char.isdigit():
+            total_char = [current_char]
             self.pos += 1
-            total_char = []
-            total_char.append(current_char)
             while self.pos < len(self.text) and self.text[self.pos].isdigit():
                 total_char.append(self.text[self.pos])
-                self.pos +=1
+                self.pos += 1
             number_str = "".join(total_char)
-            return Token(NUMBER, int(number_str))
+            return Token(NUMBER, int(number_str), token_start)
         elif current_char == "+":
-            self.pos +=1
-            return Token(PLUS, current_char)
+            self.pos += 1
+            return Token(PLUS, current_char, token_start)
         elif current_char == "-":
-            self.pos +=1
-            return Token(MINUS, current_char)
+            self.pos += 1
+            return Token(MINUS, current_char, token_start)
         elif current_char == "*":
-            self.pos +=1
-            return Token(STAR, current_char)
+            self.pos += 1
+            return Token(STAR, current_char, token_start)
         elif current_char == "/":
-            self.pos +=1
-            return Token(SLASH, current_char)
+            self.pos += 1
+            return Token(SLASH, current_char, token_start)
         elif current_char == "(": 
-            self.pos +=1
-            return Token(LPAREN, current_char)
+            self.pos += 1
+            return Token(LPAREN, current_char, token_start)
         elif current_char == ")":
-            self.pos +=1
-            return Token(RPAREN, current_char)
+            self.pos += 1
+            return Token(RPAREN, current_char, token_start)
+        else:
+            raise SyntaxError(f"Unexpected character '{current_char}' at position {self.pos}")
          
 class Parser:
     def __init__(self, lexer):
@@ -74,7 +79,10 @@ class Parser:
     def expect(self, token_type):
         """Consume token if it matches, else error"""
         if self.current_token.type != token_type:
-            raise SyntaxError
+            raise SyntaxError(
+                f"Expected {token_type}, got {self.current_token.type} "
+                f"at position {self.current_token.pos}"
+            )
         self.advance()
     
     def get_infix_binding_power(self, op_type):
@@ -107,7 +115,10 @@ class Parser:
             expr = self.parse_expr(7) #harcoded higher for unaryOps
             return ast.UnaryOp(value, expr)
         else:
-            raise SyntaxError(f"Unexpected token in primary position: {self.current_token.type}")
+            raise SyntaxError(
+                f"Unexpected token in primary position: {self.current_token.type} "
+                f"at position {self.current_token.pos}"
+            )
         
     def parse_expr(self, min_bp):
         """Core pratt algorithm"""

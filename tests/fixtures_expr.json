@@ -1,0 +1,18 @@
+[
+  {"src": "3 + 5", "expected": 8},
+  {"src": "3 + 5 * 2", "expected": 13},
+  {"src": "(3 + 5) * 2", "expected": 16},
+  {"src": "-5 + 3", "expected": -2},
+  {"src": "8 - 3 - 2", "expected": 3},
+  {"src": "10 / 2 + 3 * 4", "expected": 17.0},
+  {"src": "  12 + (34 - 5) * 2 ", "expected": 70},
+  {"src": "-(2+3)*4", "expected": -20},
+  {"src": "1 + 2 + 3 + 4", "expected": 10},
+  {"src": "100 - 50 - 25", "expected": 25},
+  {"src": "2 * 3 * 4", "expected": 24},
+  {"src": "((3))", "expected": 3},
+  {"src": "(((3 + 5)))", "expected": 8},
+  {"src": "- - 5", "expected": 5},
+  {"src": "2 * -3", "expected": -6},
+  {"src": "-( -5 + 2 )", "expected": 3}
+]

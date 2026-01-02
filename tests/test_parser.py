@@ -1,48 +1,88 @@
-"""Quick tests for the parser"""
-import sys
+# ast_workshop/tests/test_parser.py
+"""
+Parser tests using golden fixtures.
+
+Run with: pytest tests/test_parser.py -v
+"""
+import json
 from pathlib import Path
+import sys
+
+# Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from parse import Lexer, Parser
 
-# Test 1: Simple addition
-code1 = "3 + 5"
-parser1 = Parser(Lexer(code1))
-ast1 = parser1.parse()
-result1 = ast1.evaluate({})
-print(f"Test 1: {code1} = {result1}")  # Should be 8
-assert result1 == 8, f"Expected 8, got {result1}"
+FIXTURES = Path(__file__).parent / "fixtures_expr.json"
 
-# Test 2: Precedence
-code2 = "3 + 5 * 2"
-parser2 = Parser(Lexer(code2))
-ast2 = parser2.parse()
-result2 = ast2.evaluate({})
-print(f"Test 2: {code2} = {result2}")  # Should be 13 (not 16)
-assert result2 == 13, f"Expected 13, got {result2}"
 
-# Test 3: Parentheses
-code3 = "(3 + 5) * 2"
-parser3 = Parser(Lexer(code3))
-ast3 = parser3.parse()
-result3 = ast3.evaluate({})
-print(f"Test 3: {code3} = {result3}")  # Should be 16
-assert result3 == 16, f"Expected 16, got {result3}"
+def eval_expr(src: str):
+    """Parse and evaluate an expression string."""
+    parser = Parser(Lexer(src))
+    ast = parser.parse()
+    return ast.evaluate({})
 
-# Test 4: Unary minus
-code4 = "-5 + 3"
-parser4 = Parser(Lexer(code4))
-ast4 = parser4.parse()
-result4 = ast4.evaluate({})
-print(f"Test 4: {code4} = {result4}")  # Should be -2
-assert result4 == -2, f"Expected -2, got {result4}"
 
-# Test 5: Complex expression
-code5 = "10 / 2 + 3 * 4"
-parser5 = Parser(Lexer(code5))
-ast5 = parser5.parse()
-result5 = ast5.evaluate({})
-print(f"Test 5: {code5} = {result5}")  # Should be 17 (5 + 12)
-assert result5 == 17, f"Expected 17, got {result5}"
+def test_fixtures():
+    """Test all expressions in fixtures_expr.json."""
+    data = json.loads(FIXTURES.read_text())
+    for row in data:
+        src = row["src"]
+        expected = row["expected"]
+        got = eval_expr(src)
+        assert got == expected, f'{src!r} -> {got}, expected {expected}'
 
-print("\n✅ All tests passed!")
+
+def test_precedence_mul_over_add():
+    """Multiplication binds tighter than addition."""
+    assert eval_expr("3 + 5 * 2") == 13  # not 16
+
+
+def test_associativity_left():
+    """Subtraction is left-associative: 8-3-2 = (8-3)-2 = 3."""
+    assert eval_expr("8 - 3 - 2") == 3  # not 7
+
+
+def test_unary_minus():
+    """Unary minus has high precedence."""
+    assert eval_expr("-5 + 3") == -2
+    assert eval_expr("2 * -3") == -6
+
+
+def test_parentheses_override():
+    """Parentheses override precedence."""
+    assert eval_expr("(3 + 5) * 2") == 16
+
+
+def test_nested_parens():
+    """Deeply nested parentheses work."""
+    assert eval_expr("(((3 + 5)))") == 8
+
+
+def test_double_unary():
+    """Double unary minus: - - 5 = 5."""
+    assert eval_expr("- - 5") == 5
+
+
+def test_unary_in_parens():
+    """Unary inside parentheses: -(2+3)*4 = -20."""
+    assert eval_expr("-(2+3)*4") == -20
+
+
+def test_whitespace_tolerance():
+    """Parser handles various whitespace."""
+    assert eval_expr("  12 + (34 - 5) * 2 ") == 70
+
+
+if __name__ == "__main__":
+    # Allow running directly for quick testing
+    test_fixtures()
+    test_precedence_mul_over_add()
+    test_associativity_left()
+    test_unary_minus()
+    test_parentheses_override()
+    test_nested_parens()
+    test_double_unary()
+    test_unary_in_parens()
+    test_whitespace_tolerance()
+    print("\n✅ All parser tests passed!")
